@@ -308,22 +308,29 @@ class ChatButton:
         button_rect = self.image.get_rect(topleft=self.pos)
         return button_rect.collidepoint(x, y)
 
-def connect_to_server():
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect(('localhost', 5500))
-    return client_socket
-
 # Tạo một đối tượng lock
 chat_log_lock = threading.Lock()
 
+# Trong hàm send_message:
+def send_message(client_socket, input_text):
+    try:
+        client_socket.sendall(input_text.encode('utf-8'))
+        # Thêm tin nhắn với tiền tố "You:" vào chat_log
+        with chat_log_lock:
+            chat_log.append(input_text)
+    except Exception as e:
+        print("Error sending message:", e)
+
+# Trong hàm receive_messages:
 def receive_messages(client_socket, chat_log):
     try:
         while True:
             message = client_socket.recv(1024).decode('utf-8')
             if message:
                 # Kiểm tra xem tin nhắn có phải từ địa chỉ IP của máy cục bộ hay không
-                if message.split(":")[0] != "localhost":
+                if not message.startswith("You:") and not message.startswith("Other:"):
                     with chat_log_lock:  # Sử dụng lock để bảo vệ việc thay đổi chat_log
+                        # Thêm tin nhắn từ người khác vào chat_log với tiền tố "Other:"
                         chat_log.append("Other: " + message)
             else:
                 break
@@ -332,13 +339,6 @@ def receive_messages(client_socket, chat_log):
     finally:
         client_socket.close()
 
-def send_message(client_socket, input_text):
-    try:
-        client_socket.sendall(input_text.encode('utf-8'))
-    except Exception as e:
-        print("Error sending message:", e)
-
-client_socket = connect_to_server()
 chat_log = []  # Danh sách để lưu tin nhắn trong cuộc trò chuyện
 def chat_box():
     run_chat = True
@@ -372,8 +372,7 @@ def chat_box():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:  # Xử lý khi người dùng nhấn Enter
                     if input_text:  # Đảm bảo rằng ô nhập liệu không trống
-                        send_message(client_socket, input_text)  # Gửi tin nhắn đến máy chủ
-                        chat_log.append("You: " + input_text)
+                        send_message(client_socket, "You: " + input_text)  # Gửi tin nhắn đến máy chủ
                         input_text = ""  # Đặt lại nội dung của ô nhập liệu
                 elif event.key == pygame.K_BACKSPACE:  # Xử lý khi người dùng nhấn phím Backspace
                     input_text = input_text[:-1]  # Xóa ký tự cuối cùng trong ô nhập liệu
@@ -596,18 +595,116 @@ def get_font(size):
     return pygame.font.SysFont("comicsans",size)
 
 # mode play in main menu
-def play():
-  
+connected = threading.Event()
+ready_to_start = threading.Event()
+client_socket = None
+
+def connect_to_server():
+    global client_socket
+    try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect(('localhost', 5500))
+        connected.set()
+    except Exception as e:
+        print(f"Lỗi khi kết nối tới máy chủ: {e}")
+        client_socket = None
+
+def ready_from_server():
+    global client_socket
     while True:
+        if ready_to_start.is_set():
+            break
+        try:
+            if client_socket is not None:
+                if connected.is_set():
+                    # Nhận thông điệp từ máy chủ
+                    message = client_socket.recv(1024).decode()
+                    if message == "ready_to_start":
+                        ready_to_start.set()
+                else:
+                    # Dừng một thời gian ngắn để cho socket có cơ hội kết nối
+                    time.sleep(0.1)
+        except ConnectionResetError as e:
+            # print(f"Kết nối đã bị đóng bởi máy chủ: {e}")
+            break
+        except Exception as e:
+            # print(f"Lỗi khi nhận thông điệp từ máy chủ: {e}")
+            break
+
+def reset_game_state():
+    global connected, ready_to_start
+    connected.clear()
+    ready_to_start.clear()  # Đặt lại trạng thái "ready_to_start"
+
+def play():
+    global connected, ready_to_start, client_thread
+    
+    # Reset game state
+    reset_game_state()
+
+    waiting_text = "Waiting for other players..."
+    start_time = time.time()
+    display_start_message = False
+    connect = False
+
+    # Create Pygame screen
+    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
+    running = True
+    while running:
         for event in pygame.event.get():
-            if event.type==pygame.QUIT:
+            if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            if event.type==pygame.MOUSEBUTTONDOWN:
-                # difficulty_menu()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    if connect:
+                        try:
+                            client_socket.close()
+                        except Exception as e:
+                            print(f"Error closing socket: {e}")
+                    running = False
+                elif event.key == pygame.K_p:
+                    if not connect:
+                        connect_to_server()
+                        connected.wait()  # Wait until connected
+                        if connected.is_set():
+                            client_thread = threading.Thread(target=ready_from_server)
+                            client_thread.start()
+                    connect = True
+
+        if not connect:
+            screen.fill((0, 0, 0))
+            font = pygame.font.Font(None, 36)
+            text = font.render("Press 'P' to play", True, (255, 255, 255))
+            text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            screen.blit(text, text_rect)
+        else:
+            screen.fill((0, 0, 0))
+            font = pygame.font.Font(None, 36)
+            text = font.render(waiting_text, True, (255, 255, 255))
+            text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+            screen.blit(text, text_rect)
+
+            if ready_to_start.is_set() and not display_start_message:
+                display_start_message = True
+                waiting_text = "Both players are ready, let's start the game..."
+
+        pygame.display.flip()
+
+        if display_start_message:
+            elapsed_time = time.time() - start_time
+            if elapsed_time >= 3:
+                running = False
                 main()
 
-        pygame.display.update()
+    # Reset game state if the loop breaks
+    reset_game_state()
+
+
+# Khởi tạo luồng cho client
+client_thread = threading.Thread(target=ready_from_server)
+client_thread.start()
 
 #mode help in main menu
 def help():

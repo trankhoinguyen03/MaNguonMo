@@ -14,6 +14,7 @@ class Client:
             self.client_socket.connect((self.host, self.port))
             print(f"Đã kết nối đến {self.host}:{self.port}")
             self.send_messages()
+            self.ready_from_server()
         except ConnectionRefusedError:
             print("Không thể kết nối đến server. Server đã từ chối kết nối.")
 
@@ -23,6 +24,14 @@ class Client:
 
             # Gửi tin nhắn đến server
             self.client_socket.send(message.encode())
+    def ready_from_server(self):
+        try:
+            # Receive message from server
+            message = self.client_socket.recv(1024).decode()
+            print(message)
+        except Exception as e:
+            print(f"Error receiving message from server: {e}")
+            return None
 
 if __name__ == '__main__':
     host = 'localhost'

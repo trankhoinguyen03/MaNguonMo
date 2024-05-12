@@ -363,7 +363,7 @@ class ChatButton:
 
 def connect_to_server():
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client_socket.connect(('localhost', 5555))
+    client_socket.connect(('localhost', 5500))
     return client_socket
 
 def receive_messages(client_socket, chat_log):

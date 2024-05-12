@@ -2,11 +2,10 @@ import socket
 import threading
 
 class Client:
-    """ Class representing a person  """
-
+    """ Class representing a client """
     def __init__(self):
-        self.host = 'localhost'  # Địa chỉ IP
-        self.port = 5500
+        self.host = '127.0.0.1'  # Địa chỉ IP
+        self.port = 5500  # Cổng
 
         self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client_socket.connect((self.host, self.port))

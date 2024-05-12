@@ -294,59 +294,6 @@ def collide(obj1, obj2):
     offset_y = obj2.y - obj1.y
     return obj1.mask.overlap(obj2.mask, (offset_x, offset_y)) != None
 
-def difficulty_menu():
-    run = True
-    FPS = 60
-    menu_font = pygame.font.SysFont("Arial", 40)
-    menu_title = menu_font.render("Select Difficulty", 1, (255, 255, 255))
-    easy_text = menu_font.render("Easy", 1, (255, 255, 255))
-    medium_text = menu_font.render("Medium", 1, (255, 255, 255))
-    hard_text = menu_font.render("Hard", 1, (255, 255, 255))
-    selected_difficulty = None
-    clock = pygame.time.Clock()
-
-    while run:
-        clock.tick(FPS)
-        WIN.blit(BG, (0, 0))
-
-        # draw menu title and options
-        menu_title_width = menu_title.get_width()
-        WIN.blit(menu_title, (WIDTH / 2 - menu_title_width / 2, 100))
-
-        easy_text_width = easy_text.get_width()
-        medium_text_width = medium_text.get_width()
-        hard_text_width = hard_text.get_width()
-
-        WIN.blit(easy_text, (WIDTH / 2 - easy_text_width / 2, 250))
-        WIN.blit(medium_text, (WIDTH / 2 - medium_text_width / 2, 350))
-        WIN.blit(hard_text, (WIDTH / 2 - hard_text_width / 2, 450))
-
-        # handle menu options
-        mouse_pos = pygame.mouse.get_pos()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-                pygame.quit()
-
-            # handle mouse clicks
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                # check if the user clicked on a difficulty option
-                option_width = 200
-                option_height = 100
- 
-                if easy_text.get_rect(center=(WIDTH / 2, 250), width=option_width, height=option_height).collidepoint(mouse_pos):
-                    selected_difficulty = "Easy"
-                    run = False
-                elif medium_text.get_rect(center=(WIDTH / 2, 350), width=option_width, height=option_height).collidepoint(mouse_pos):
-                    selected_difficulty = "Medium"
-                    run = False
-                elif hard_text.get_rect(center=(WIDTH / 2, 450), width=option_width, height=option_height).collidepoint(mouse_pos):
-                    selected_difficulty = "Hard"
-                    run = False
-
-        pygame.display.update()
-
-    return selected_difficulty
 #Chat
 class ChatButton:
     def __init__(self, image, pos):
@@ -366,13 +313,18 @@ def connect_to_server():
     client_socket.connect(('localhost', 5500))
     return client_socket
 
+# Tạo một đối tượng lock
+chat_log_lock = threading.Lock()
+
 def receive_messages(client_socket, chat_log):
     try:
         while True:
             message = client_socket.recv(1024).decode('utf-8')
             if message:
-                with chat_log.lock:  # Sử dụng lock khi sửa đổi chat_log
-                    chat_log.append("Other: " + message)
+                # Kiểm tra xem tin nhắn có phải từ địa chỉ IP của máy cục bộ hay không
+                if message.split(":")[0] != "localhost":
+                    with chat_log_lock:  # Sử dụng lock để bảo vệ việc thay đổi chat_log
+                        chat_log.append("Other: " + message)
             else:
                 break
     except Exception as e:
@@ -386,13 +338,13 @@ def send_message(client_socket, input_text):
     except Exception as e:
         print("Error sending message:", e)
 
-
-
+client_socket = connect_to_server()
+chat_log = []  # Danh sách để lưu tin nhắn trong cuộc trò chuyện
 def chat_box():
     run_chat = True
     chat_font = pygame.font.SysFont("Arial", 14)
     input_font = pygame.font.SysFont("Arial", 14)
-    chat_log = []  # Danh sách để lưu tin nhắn trong cuộc trò chuyện
+    
     input_text = ""  # Biến để lưu nội dung của ô nhập liệu
 
     # Kích thước của chat menu
@@ -408,7 +360,6 @@ def chat_box():
     close_button_y = chat_menu_y + 10
 
     # Khởi tạo thread để nhận tin nhắn
-    client_socket = connect_to_server()
     receive_thread = threading.Thread(target=receive_messages, args=(client_socket, chat_log))
     receive_thread.daemon = True  # Đặt thread nhận tin nhắn thành daemon để nó tự đóng khi chương trình chính kết thúc
     receive_thread.start()
@@ -479,28 +430,12 @@ def main():
     lost_font = pygame.font.SysFont("Arial", 40)
 
     # get the level from user
-    difficulty = difficulty_menu() 
-    if difficulty == "Easy":
-        FPS = 50
-        wave_length = 5
-        enemy_vel = 1
-        lives = 6
-        dif = 4
-        bg_running = 0.50
-    elif difficulty == "Medium":
-        FPS = 70
-        wave_length = 6
-        enemy_vel = 1.1
-        lives = 5
-        dif = 3
-        bg_running = 1.3
-    elif difficulty == "Hard":
-        FPS = 130
-        wave_length = 8
-        enemy_vel = 1.3
-        lives = 4
-        dif = 2
-        bg_running = 1.8
+    FPS = 50
+    wave_length = 5
+    enemy_vel = 1
+    lives = 6
+    dif = 4
+    bg_running = 0.50
     clock = pygame.time.Clock()
 
     lost = False
@@ -649,12 +584,7 @@ def main():
 
             # collisions of enemy and player
             if collide(enemy, player):
-                if difficulty == "Easy":
-                    player.health -= 10
-                elif difficulty == "Medium":
-                    player.health -= 20
-                elif difficulty == "Hard":
-                    player.health -= 30
+                player.health -= 10
                 enemies.remove(enemy)
             elif enemy.y + enemy.get_height() > HEIGHT:
                 lives -= 1

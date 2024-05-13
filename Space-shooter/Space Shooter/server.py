@@ -4,7 +4,7 @@ import time
 
 class Server:
     def __init__(self, max_connections_callback=None):
-        self.host = 'localhost'
+        self.host = socket.gethostbyname(socket.gethostname())
         self.port = 5500
         self.max_connections = 2
         self.current_connections = 0

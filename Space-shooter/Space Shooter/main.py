@@ -612,7 +612,9 @@ def connect_to_server():
     global client_socket
     try:
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client_socket.connect(('localhost', 5500))
+        host = socket.gethostbyname(socket.gethostname())
+        port = 5500
+        client_socket.connect((host, port))
         connected.set()
     except Exception as e:
         print(f"Lỗi khi kết nối tới máy chủ: {e}")

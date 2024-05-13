@@ -2,4 +2,4 @@
 
 còn thiếu chức năng truyền điểm số và xem ai game over để xác định người chiến thắng
 
-thiếu network để kết nối với 2 máy khác nhau, hiện tại chỉ có thể chạy trên local
+demo chức năng kết nối tới 2 máy khác nhau

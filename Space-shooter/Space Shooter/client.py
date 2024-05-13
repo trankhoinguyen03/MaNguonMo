@@ -34,7 +34,7 @@ class Client:
             return None
 
 if __name__ == '__main__':
-    host = 'localhost'
+    host = socket.gethostbyname(socket.gethostname())
     port = 5500
     client = Client(host, port)
 

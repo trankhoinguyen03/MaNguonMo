@@ -315,9 +315,9 @@ chat_log_lock = threading.Lock()
 def send_message(client_socket, input_text):
     try:
         client_socket.sendall(input_text.encode('utf-8'))
-        # Thêm tin nhắn với tiền tố "You:" vào chat_log
+        # Thêm tin nhắn vào chat_log
         with chat_log_lock:
-            chat_log.append(input_text)
+            chat_log.append("You: "+input_text)
     except Exception as e:
         print("Error sending message:", e)
 
@@ -327,11 +327,9 @@ def receive_messages(client_socket, chat_log):
         while True:
             message = client_socket.recv(1024).decode('utf-8')
             if message:
-                # Kiểm tra xem tin nhắn có phải từ địa chỉ IP của máy cục bộ hay không
-                if not message.startswith("You:") and not message.startswith("Other:"):
-                    with chat_log_lock:  # Sử dụng lock để bảo vệ việc thay đổi chat_log
-                        # Thêm tin nhắn từ người khác vào chat_log với tiền tố "Other:"
-                        chat_log.append("Other: " + message)
+                with chat_log_lock:
+                    # Thêm tin nhắn từ client vào chat log
+                    chat_log.append(message)
             else:
                 break
     except Exception as e:
@@ -340,10 +338,13 @@ def receive_messages(client_socket, chat_log):
         client_socket.close()
 
 chat_log = []  # Danh sách để lưu tin nhắn trong cuộc trò chuyện
+
 def chat_box():
     run_chat = True
     chat_font = pygame.font.SysFont("Arial", 14)
     input_font = pygame.font.SysFont("Arial", 14)
+
+    current_client_address = client_socket.getpeername()
     
     input_text = ""  # Biến để lưu nội dung của ô nhập liệu
 
@@ -359,11 +360,6 @@ def chat_box():
     close_button_x = chat_menu_x + chat_menu_width - 30
     close_button_y = chat_menu_y + 10
 
-    # Khởi tạo thread để nhận tin nhắn
-    receive_thread = threading.Thread(target=receive_messages, args=(client_socket, chat_log))
-    receive_thread.daemon = True  # Đặt thread nhận tin nhắn thành daemon để nó tự đóng khi chương trình chính kết thúc
-    receive_thread.start()
-
     while run_chat:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -372,7 +368,7 @@ def chat_box():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:  # Xử lý khi người dùng nhấn Enter
                     if input_text:  # Đảm bảo rằng ô nhập liệu không trống
-                        send_message(client_socket, "You: " + input_text)  # Gửi tin nhắn đến máy chủ
+                        send_message(client_socket, input_text)  # Gửi tin nhắn đến máy chủ
                         input_text = ""  # Đặt lại nội dung của ô nhập liệu
                 elif event.key == pygame.K_BACKSPACE:  # Xử lý khi người dùng nhấn phím Backspace
                     input_text = input_text[:-1]  # Xóa ký tự cuối cùng trong ô nhập liệu
@@ -395,6 +391,12 @@ def chat_box():
         # Vẽ giao diện chat
         y_offset = chat_menu_y + 10
         for message in chat_log:
+            # Kiểm tra xem tin nhắn có đến từ client khác không
+            if message.startswith("You:") and message[5:] != current_client_address:
+                message = "You: " + message[5:]
+            else:
+                message = "Other: " + message
+            
             text_surface = chat_font.render(message, True, (255, 255, 255))  # Render tin nhắn
             WIN.blit(text_surface, (chat_menu_x + 10, y_offset))  # Vẽ tin nhắn lên màn hình
             y_offset += text_surface.get_height() + 5  # Tăng y_offset để vẽ tin nhắn tiếp theo
@@ -410,7 +412,6 @@ def chat_box():
         WIN.blit(close_text, (close_button_x + 4, close_button_y))
 
         pygame.display.update()
-
 
 def main():
     run = True
@@ -444,6 +445,11 @@ def main():
     CHAT_BUTTON_POS = (10, 150)  # Vị trí của nút chat
     CHAT_BUTTON_IMAGE = pygame.image.load(os.path.join("assets", "Chat_Rect.png"))  # Load hình ảnh của nút chat
     chat_button = ChatButton(CHAT_BUTTON_IMAGE, CHAT_BUTTON_POS)
+
+    # Khởi tạo thread để nhận tin nhắn
+    receive_thread = threading.Thread(target=receive_messages, args=(client_socket, chat_log))
+    receive_thread.daemon = True  # Đặt thread nhận tin nhắn thành daemon để nó tự đóng khi chương trình chính kết thúc
+    receive_thread.start()
 
     def redraw_window():
         WIN.blit(BG, (0,0))
@@ -545,6 +551,9 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 quit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    return
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = pygame.mouse.get_pos()
                 if chat_button.is_clicked(mouse_pos):
@@ -694,7 +703,7 @@ def play():
 
         if display_start_message:
             elapsed_time = time.time() - start_time
-            if elapsed_time >= 3:
+            if elapsed_time >= 1:
                 running = False
                 main()
 

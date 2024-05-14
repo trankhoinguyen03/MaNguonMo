@@ -4,9 +4,9 @@ import time
 import random
 from pygame import mixer
 import sys
-import time
 import socket
 import threading
+import json
 from threading import Lock
 from button import Button
 from objects import Background
@@ -32,6 +32,7 @@ shoot_sound = mixer.Sound(os.path.join("assets", "bullet_sound.wav"))
 shoot_sound_enemy = mixer.Sound(os.path.join("assets", "bullet_sound_enemy.wav"))
 get_score = mixer.Sound(os.path.join("assets", "get_score.wav"))
 gameOver_sound = mixer.Sound(os.path.join("assets", "gameOver_sound.wav"))
+gameWin_sound = mixer.Sound(os.path.join("assets", "get_score.wav"))
 
 # Player player
 YELLOW_SPACE_SHIP = pygame.image.load(os.path.join("assets", "pixel_ship.png"))
@@ -414,6 +415,7 @@ def chat_box():
         pygame.display.update()
 
 def main():
+    global run
     run = True
     level = 0
     enemies = []
@@ -428,6 +430,7 @@ def main():
     
     main_font = pygame.font.SysFont("Arial", 30)
     lost_font = pygame.font.SysFont("Arial", 40)
+    win_font = pygame.font.SysFont("Arial", 40)
 
     # get the level from user
     FPS = 50
@@ -439,7 +442,10 @@ def main():
     clock = pygame.time.Clock()
 
     lost = False
-    lost_count = 0
+
+    win = False
+
+    status_sent = False
 
     # Vẽ nút chat chỉ khi người dùng đã nhấn "PLAY"
     CHAT_BUTTON_POS = (10, 150)  # Vị trí của nút chat
@@ -458,14 +464,12 @@ def main():
         lives_label = main_font.render(f"Lives: {lives}", 1, (255,255,255))
         level_label = main_font.render(f"Level: {level}", 1, (255,255,255))
         score_label = main_font.render(f"Score: {player.score}", 1, (255,255,255))
-        oponent_label = main_font.render(f"Oponent: {player.score}", 1, (255,255,255))
 
         chat_button.draw(WIN)
 
         WIN.blit(lives_label, (10, 10))
         WIN.blit(level_label, (WIDTH - level_label.get_width() - 10, 10))
         WIN.blit(score_label, (WIDTH/2 - score_label.get_width()/2, 10))
-        WIN.blit(oponent_label, (10, 70))
 
         for enemy in enemies:
             enemy.draw(WIN)
@@ -491,7 +495,21 @@ def main():
                 gameOver_sound.play()
             WIN.blit(lost_label, (WIDTH/2 - lost_label.get_width()/2, 350))
 
+        if win:
+            win_label = win_font.render("You Win!", 1, (255,255,255))
+            if win_label:
+                gameWin_sound.play()
+            WIN.blit(win_label, (WIDTH/2 - win_label.get_width()/2, 350))
+
         pygame.display.update()
+
+    def delay_run_false():
+        global run
+        run = False
+
+    def send_game_status(status):
+        message = json.dumps({'status': status})
+        client_socket.sendall(message.encode('utf-8'))
 
     while run:
         clock.tick(FPS)
@@ -499,13 +517,20 @@ def main():
 
         if lives <= 0 or player.health <= 0:
             lost = True
-            lost_count += 1
 
-        if lost:
-            if lost_count > FPS * 3:
-                run = False
-            else:
-                continue
+        if player.score == 100:
+            win = True
+
+        if (win or lost) and not status_sent:
+            if win:
+                send_game_status('win')  # Gửi thông tin chiến thắng tới server
+            if lost:
+                send_game_status('lost')  # Gửi thông tin thua cuộc tới server
+
+            threading.Timer(1, delay_run_false).start()  # Trì hoãn việc đặt run thành False sau 5 giây
+            threading.Timer(1, close_socket_and_reset).start()  # Trì hoãn việc reset và đóng socket sau 5 giây
+            status_sent = True  # Đặt cờ để ngăn chặn việc gửi nhiều lần
+
 
         if len(enemies) == 0:
             level += 1
@@ -553,6 +578,7 @@ def main():
                 quit()
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
+                    client_socket.close()
                     return
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = pygame.mouse.get_pos()
@@ -607,6 +633,10 @@ def get_font(size):
 connected = threading.Event()
 ready_to_start = threading.Event()
 client_socket = None
+
+def close_socket_and_reset():
+    reset_game_state()
+    client_socket.close()
 
 def connect_to_server():
     global client_socket

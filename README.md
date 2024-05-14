@@ -1,5 +1,5 @@
 [Link báo cáo project](https://www.overleaf.com/6139839564rqkmzkmpbnhm#af792e)
 
-còn thiếu chức năng truyền điểm số và xem ai game over để xác định người chiến thắng
+demo chức năng win và lost, đã có thể truyền stastus win hoặc lost cho server, thiếu phần nhận status
 
 demo chức năng kết nối tới 2 máy khác nhau

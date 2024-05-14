@@ -412,7 +412,7 @@ def chat_box():
         close_text = input_font.render("X", True, (255, 255, 255))
         WIN.blit(close_text, (close_button_x + 4, close_button_y))
 
-        pygame.display.update()
+        pygame.display.update() 
 
 def main():
     global run
@@ -441,11 +441,14 @@ def main():
     bg_running = 0.50
     clock = pygame.time.Clock()
 
+    global lost, win, status_sent
+
     lost = False
 
     win = False
 
     status_sent = False
+
 
     # Vẽ nút chat chỉ khi người dùng đã nhấn "PLAY"
     CHAT_BUTTON_POS = (10, 150)  # Vị trí của nút chat
@@ -511,6 +514,26 @@ def main():
         message = json.dumps({'status': status})
         client_socket.sendall(message.encode('utf-8'))
 
+    def receive_game_status():
+        while True:
+            try:
+                data = client_socket.recv(1024).decode('utf-8')
+                if data:
+                    status = json.loads(data).get('status')
+                    if status == 'lost':
+                        global win
+                        win = True
+                    elif status == 'win':
+                        global lost
+                        lost = True
+            except Exception as e:
+                print(f"Error receiving game status: {e}")
+                break
+
+    status_thread = threading.Thread(target=receive_game_status)
+    status_thread.daemon = True
+    status_thread.start()
+
     while run:
         clock.tick(FPS)
         redraw_window()
@@ -518,7 +541,7 @@ def main():
         if lives <= 0 or player.health <= 0:
             lost = True
 
-        if player.score == 100:
+        if player.score == 50:
             win = True
 
         if (win or lost) and not status_sent:
@@ -527,8 +550,8 @@ def main():
             if lost:
                 send_game_status('lost')  # Gửi thông tin thua cuộc tới server
 
-            threading.Timer(1, delay_run_false).start()  # Trì hoãn việc đặt run thành False sau 5 giây
-            threading.Timer(1, close_socket_and_reset).start()  # Trì hoãn việc reset và đóng socket sau 5 giây
+            threading.Timer(2, delay_run_false).start()  # Trì hoãn việc đặt run thành False sau 5 giây
+            threading.Timer(2, reset).start()  # Trì hoãn việc reset sau 5 giây
             status_sent = True  # Đặt cờ để ngăn chặn việc gửi nhiều lần
 
 
@@ -634,9 +657,14 @@ connected = threading.Event()
 ready_to_start = threading.Event()
 client_socket = None
 
-def close_socket_and_reset():
+def reset():
     reset_game_state()
-    client_socket.close()
+    if client_socket is not None:
+        try:
+            client_socket.close()
+            print("Socket closed successfully.")
+        except Exception as e:
+            print(f"Error closing socket: {e}")
 
 def connect_to_server():
     global client_socket
@@ -646,6 +674,7 @@ def connect_to_server():
         port = 5500
         client_socket.connect((host, port))
         connected.set()
+        print("Connected to server successfully.")
     except Exception as e:
         print(f"Lỗi khi kết nối tới máy chủ: {e}")
         client_socket = None

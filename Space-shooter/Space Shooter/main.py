@@ -533,7 +533,7 @@ def main():
     status_thread = threading.Thread(target=receive_game_status)
     status_thread.daemon = True
     status_thread.start()
-
+    
     while run:
         clock.tick(FPS)
         redraw_window()
@@ -610,7 +610,6 @@ def main():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_m:
                     chat_box()  # Hiển thị giao diện chat khi nhấn phím "M"
-
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_a] and player.x - player_vel > 0: # left
@@ -737,10 +736,29 @@ def play():
                 elif event.key == pygame.K_p:
                     if not connect:
                         connect_to_server()
-                        connected.wait()  # Wait until connected
-                        if connected.is_set():
-                            client_thread = threading.Thread(target=ready_from_server)
-                            client_thread.start()
+                        connected.wait(1)  # Wait until connected, with a timeout of 5 seconds
+                        if not connected.is_set():
+                            screen.fill((0, 0, 0))
+                            font = pygame.font.Font(None, 36)
+                            text = font.render("Failed to connect to the server.", True, (255, 255, 255))
+                            text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+                            screen.blit(text, text_rect)
+                            pygame.display.flip()
+
+                            # Wait for 2 seconds to show the message before returning
+                            wait_time = 2000  # 2000 milliseconds = 2 seconds
+                            start_wait = pygame.time.get_ticks()
+                            while pygame.time.get_ticks() - start_wait < wait_time:
+                                for event in pygame.event.get():
+                                    if event.type == pygame.QUIT:
+                                        pygame.quit()
+                                        sys.exit()
+                                    elif event.type == pygame.KEYDOWN:
+                                        if event.key == pygame.K_ESCAPE:
+                                            return
+                            return  # Return if unable to connect to the server
+                        client_thread = threading.Thread(target=ready_from_server)
+                        client_thread.start()
                     connect = True
 
         if not connect:

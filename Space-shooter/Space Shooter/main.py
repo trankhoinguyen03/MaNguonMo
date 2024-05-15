@@ -550,8 +550,8 @@ def main():
             if lost:
                 send_game_status('lost')  # Gửi thông tin thua cuộc tới server
 
-            threading.Timer(2, delay_run_false).start()  # Trì hoãn việc đặt run thành False sau 5 giây
-            threading.Timer(2, reset).start()  # Trì hoãn việc reset sau 5 giây
+            threading.Timer(2, delay_run_false).start()  # Trì hoãn việc đặt run thành False
+            threading.Timer(2, reset).start()  # Trì hoãn việc reset
             status_sent = True  # Đặt cờ để ngăn chặn việc gửi nhiều lần
 
 

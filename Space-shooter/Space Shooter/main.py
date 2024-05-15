@@ -541,7 +541,7 @@ def main():
         if lives <= 0 or player.health <= 0:
             lost = True
 
-        if player.score == 50:
+        if player.score == 500:
             win = True
 
         if (win or lost) and not status_sent:

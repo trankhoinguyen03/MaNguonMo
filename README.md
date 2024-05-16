@@ -5,10 +5,6 @@
 - ```python3 server.py```
 - ```python3 main.py```
 
-# Another device
-
-- ```python3 main.py```
-
 ## Document 
 
 [Overleaf](https://www.overleaf.com/read/sxfwzsyncnhp#3b4740)

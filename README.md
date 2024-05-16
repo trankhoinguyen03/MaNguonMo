@@ -1,3 +1,1 @@
-[Link báo cáo project](https://www.overleaf.com/6139839564rqkmzkmpbnhm#af792e)
-
-demo chức năng kết nối tới 2 máy khác nhau
+[Link báo cáo project](https://www.overleaf.com/read/sxfwzsyncnhp#3b4740)

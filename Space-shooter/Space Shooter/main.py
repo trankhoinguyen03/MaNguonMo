@@ -515,17 +515,21 @@ def main():
         client_socket.sendall(message.encode('utf-8'))
 
     def receive_game_status():
+        global win, lost
         while True:
             try:
                 data = client_socket.recv(1024).decode('utf-8')
                 if data:
-                    status = json.loads(data).get('status')
-                    if status == 'lost':
-                        global win
-                        win = True
-                    elif status == 'win':
-                        global lost
-                        lost = True
+                    try:
+                        status = json.loads(data).get('status')
+                        if status == 'lost':
+                            lost = True
+                        elif status == 'win':
+                            win = True
+                        else:
+                            print("Received message without status or with unknown status:", data)
+                    except json.JSONDecodeError:
+                        print("Received non-JSON message:", data)
             except Exception as e:
                 print(f"Error receiving game status: {e}")
                 break
@@ -541,7 +545,7 @@ def main():
         if lives <= 0 or player.health <= 0:
             lost = True
 
-        if player.score == 50:
+        if player.score == 20:
             win = True
 
         if (win or lost) and not status_sent:

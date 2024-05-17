@@ -40,9 +40,9 @@ class Server:
                             try:
                                 client.send("ready_to_start".encode())
                             except Exception as e:
-                                print(f"Lỗi khi gửi thông báo đến client: {e}")
+                                str(e)
                 except Exception as e:
-                    print(f"Lỗi khi chấp nhận kết nối: {e}")
+                    str(e)
 
             elif not self.max_connections_reached:
                 print("Đã đạt đến số lượng kết nối tối đa, từ chối kết nối mới.")
@@ -65,12 +65,12 @@ class Server:
                         try:
                             client.send(message.encode())
                         except Exception as e:
-                            print(f"Lỗi khi gửi thông điệp đến client: {e}")
+                            str(e)
 
         except ConnectionResetError:
             print(f"Client {client_socket.getpeername()} đã đóng kết nối một cách bất ngờ.")
         except Exception as e:
-            print(f"Lỗi khi xử lý client {client_socket.getpeername()}: {e}")
+            str(e)
         finally:
             client_socket.close()  # Đóng kết nối với client
             self.clients.remove(client_socket)

@@ -331,12 +331,18 @@ def receive_messages(client_socket, chat_log):
                 with chat_log_lock:
                     # Thêm tin nhắn từ client vào chat log
                     chat_log.append(message)
+                try:
+                    global win, lost
+                    if message == "status:lost":
+                        win = True
+                    elif message == "status:win":
+                        lost = True
+                except json.JSONDecodeError:
+                    print("Received non-JSON message:")
             else:
                 break
     except Exception as e:
         print("Error receiving message:", e)
-    finally:
-        client_socket.close()
 
 chat_log = []  # Danh sách để lưu tin nhắn trong cuộc trò chuyện
 
@@ -511,32 +517,8 @@ def main():
         run = False
 
     def send_game_status(status):
-        message = json.dumps({'status': status})
+        message = "status:"+status
         client_socket.sendall(message.encode('utf-8'))
-
-    def receive_game_status():
-        global win, lost
-        while True:
-            try:
-                data = client_socket.recv(1024).decode('utf-8')
-                if data:
-                    try:
-                        status = json.loads(data).get('status')
-                        if status == 'lost':
-                            lost = True
-                        elif status == 'win':
-                            win = True
-                        else:
-                            print("Received message without status or with unknown status:", data)
-                    except json.JSONDecodeError:
-                        print("Received non-JSON message:", data)
-            except Exception as e:
-                print(f"Error receiving game status: {e}")
-                break
-
-    status_thread = threading.Thread(target=receive_game_status)
-    status_thread.daemon = True
-    status_thread.start()
 
     while run:
         clock.tick(FPS)
@@ -554,8 +536,8 @@ def main():
             if lost:
                 send_game_status('lost')  # Gửi thông tin thua cuộc tới server
 
-            threading.Timer(2, delay_run_false).start()  # Trì hoãn việc đặt run thành False sau 5 giây
-            threading.Timer(2, reset).start()  # Trì hoãn việc reset sau 5 giây
+            threading.Timer(2, delay_run_false).start()  # Trì hoãn việc đặt run thành False sau 2 giây
+            threading.Timer(2, reset).start()  # Trì hoãn việc reset sau 2 giây
             status_sent = True  # Đặt cờ để ngăn chặn việc gửi nhiều lần
 
 
@@ -674,7 +656,8 @@ def connect_to_server():
     global client_socket
     try:
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        host = socket.gethostbyname(socket.gethostname())
+        "host = socket.gethostbyname(socket.gethostname())"
+        host = "192.168.187.206"
         port = 5500
         client_socket.connect((host, port))
         connected.set()

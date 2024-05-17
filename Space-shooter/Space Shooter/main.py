@@ -51,10 +51,10 @@ BG = pygame.transform.scale(pygame.image.load(os.path.join("assets", "background
 # Background menu
 BG_MENU = pygame.transform.scale(pygame.image.load(os.path.join("assets", "background_menu.jpg")), (WIDTH, HEIGHT))
 
-# them bien background
+# thêm biến background
 bg = Background(WIN) 
 
-POWER_UP_DURATION = 20 # Thoi gian ton tai cua power-up (5 giay)
+POWER_UP_DURATION = 20 # Thời gian tồn tại của power-up (5 giây)
 
 class Laser:
     def __init__(self, x, y, img):
@@ -187,7 +187,7 @@ class Player(Ship):
         elif power_level == 3:
             self.power_level = 3
         else:
-            self.power_level = 1  # Neu gia tri khong hop le thi mac dinh la cap do 1
+            self.power_level = 1  # Nếu giá trị không hợp lệ thì mặc định là cấp độ 1
 
     def move_lasers(self, vel, objs, blood_icons, energy_icons):
         self.spawn_blood_icon(blood_icons)
@@ -309,27 +309,27 @@ class ChatButton:
         button_rect = self.image.get_rect(topleft=self.pos)
         return button_rect.collidepoint(x, y)
 
-# Tao mot doi tuong lock
+# Tạo một đối tượng lock
 chat_log_lock = threading.Lock()
 
-# Trong ham send_message:
+# Trong hàm send_message:
 def send_message(client_socket, input_text):
     try:
         client_socket.sendall(input_text.encode('utf-8'))
-        # Them tin nhan vao chat_log
+        # Thêm tin nhắn vào chat_log
         with chat_log_lock:
             chat_log.append("You: "+input_text)
     except Exception as e:
         print("Error sending message:", e)
 
-# Trong ham receive_messages:
+# Trong hàm receive_messages:
 def receive_messages(client_socket, chat_log):
     try:
         while True:
             message = client_socket.recv(1024).decode('utf-8')
             if message:
                 with chat_log_lock:
-                    # Them tin nhan tu client vao chat log
+                    # Thêm tin nhắn từ client vào chat log
                     chat_log.append(message)
             else:
                 break
@@ -338,7 +338,7 @@ def receive_messages(client_socket, chat_log):
     finally:
         client_socket.close()
 
-chat_log = []  # Danh sach de luu tin nhan trong cuoc tro chuyen
+chat_log = []  # Danh sách để lưu tin nhắn trong cuộc trò chuyện
 
 def chat_box():
     run_chat = True
@@ -347,67 +347,67 @@ def chat_box():
 
     current_client_address = client_socket.getpeername()
     
-    input_text = ""  # Bien de luu noi dung cua o nhap lieu
+    input_text = ""  # Biến để lưu nội dung của ô nhập liệu
 
-    # Kich thuoc cua chat menu
+    # Kích thước của chat menu
     chat_menu_width = WIDTH // 2
     chat_menu_height = HEIGHT // 2
 
-    # Vi tri cua chat menu
+    # Vị trí của chat menu
     chat_menu_x = 10
     chat_menu_y = 150
 
-    # Vi tri cua nut tat
+    # Vị trí của nút tắt
     close_button_x = chat_menu_x + chat_menu_width - 30
     close_button_y = chat_menu_y + 10
 
     while run_chat:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()  # Thoat khoi tro choi khi cua so bi dong
+                pygame.quit()  # Thoát khỏi trò chơi khi cửa sổ bị đóng
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:  # Xu ly khi nguoi dung nhan Enter
-                    if input_text:  # Dam bao rang o nhap lieu khong trong
-                        send_message(client_socket, input_text)  # Gui tin nhan den may chu
-                        input_text = ""  # Dat lai noi dung cua o nhap lieu
-                elif event.key == pygame.K_BACKSPACE:  # Xu ly khi nguoi dung nhan phim Backspace
-                    input_text = input_text[:-1]  # Xoa ky tu cuoi cung trong o nhap lieu
+                if event.key == pygame.K_RETURN:  # Xử lý khi người dùng nhấn Enter
+                    if input_text:  # Đảm bảo rằng ô nhập liệu không trống
+                        send_message(client_socket, input_text)  # Gửi tin nhắn đến máy chủ
+                        input_text = ""  # Đặt lại nội dung của ô nhập liệu
+                elif event.key == pygame.K_BACKSPACE:  # Xử lý khi người dùng nhấn phím Backspace
+                    input_text = input_text[:-1]  # Xóa ký tự cuối cùng trong ô nhập liệu
                 else:
-                    # Them ky tu vao o nhap lieu
+                    # Thêm ký tự vào ô nhập liệu
                     input_text += event.unicode if event.unicode.isprintable() else ""
 
-            elif event.type == pygame.MOUSEBUTTONDOWN:  # Xu ly khi nguoi dung nhan chuot
+            elif event.type == pygame.MOUSEBUTTONDOWN:  # Xử lý khi người dùng nhấn chuột
                 mouse_pos = pygame.mouse.get_pos()
-                # Kiem tra neu nguoi dung nhan vao nut tat
+                # Kiểm tra nếu người dùng nhấn vào nút tắt
                 if close_button_x <= mouse_pos[0] <= close_button_x + 20 and \
                    close_button_y <= mouse_pos[1] <= close_button_y + 20:
-                    run_chat = False  # Dong cua so chat menu
+                    run_chat = False  # Đóng cửa sổ chat menu
 
-        # Ve nen trong suot cho chat menu
+        # Vẽ nền trong suốt cho chat menu
         chat_menu_surface = pygame.Surface((chat_menu_width, chat_menu_height), pygame.SRCALPHA)
         pygame.draw.rect(chat_menu_surface, (0, 0, 0, 100), (0, 0, chat_menu_width, chat_menu_height), border_radius=10)
         WIN.blit(chat_menu_surface, (chat_menu_x, chat_menu_y))
 
-        # Ve giao dien chat
+        # Vẽ giao diện chat
         y_offset = chat_menu_y + 10
         for message in chat_log:
-            # Kiem tra xem tin nhan co den tu client khac khong
+            # Kiểm tra xem tin nhắn có đến từ client khác không
             if message.startswith("You:") and message[5:] != current_client_address:
                 message = "You: " + message[5:]
             else:
                 message = "Other: " + message
             
-            text_surface = chat_font.render(message, True, (255, 255, 255))  # Render tin nhan
-            WIN.blit(text_surface, (chat_menu_x + 10, y_offset))  # Ve tin nhan len man hinh
-            y_offset += text_surface.get_height() + 5  # Tang y_offset de ve tin nhan tiep theo
+            text_surface = chat_font.render(message, True, (255, 255, 255))  # Render tin nhắn
+            WIN.blit(text_surface, (chat_menu_x + 10, y_offset))  # Vẽ tin nhắn lên màn hình
+            y_offset += text_surface.get_height() + 5  # Tăng y_offset để vẽ tin nhắn tiếp theo
 
-        # Ve o nhap lieu
-        pygame.draw.rect(WIN, (255, 255, 255), (chat_menu_x + 5, chat_menu_y + chat_menu_height - 35, chat_menu_width - 10, 30), 2)  # Ve khung o nhap lieu
-        input_surface = input_font.render(input_text, True, (255, 255, 255))  # Render noi dung o nhap lieu
-        WIN.blit(input_surface, (chat_menu_x + 10, chat_menu_y + chat_menu_height - 30))  # Ve noi dung o nhap lieu len man hinh
+        # Vẽ ô nhập liệu
+        pygame.draw.rect(WIN, (255, 255, 255), (chat_menu_x + 5, chat_menu_y + chat_menu_height - 35, chat_menu_width - 10, 30), 2)  # Vẽ khung ô nhập liệu
+        input_surface = input_font.render(input_text, True, (255, 255, 255))  # Render nội dung ô nhập liệu
+        WIN.blit(input_surface, (chat_menu_x + 10, chat_menu_y + chat_menu_height - 30))  # Vẽ nội dung ô nhập liệu lên màn hình
 
-        # Ve nut tat
+        # Vẽ nút tắt
         pygame.draw.rect(WIN, (255, 0, 0), (close_button_x, close_button_y, 20, 20))
         close_text = input_font.render("X", True, (255, 255, 255))
         WIN.blit(close_text, (close_button_x + 4, close_button_y))
@@ -450,14 +450,14 @@ def main():
     status_sent = False
 
 
-    # Ve nut chat chi khi nguoi dung da nhan "PLAY"
-    CHAT_BUTTON_POS = (10, 150)  # Vi tri cua nut chat
-    CHAT_BUTTON_IMAGE = pygame.image.load(os.path.join("assets", "Chat_Rect.png"))  # Load hinh anh cua nut chat
+    # Vẽ nút chat chỉ khi người dùng đã nhấn "PLAY"
+    CHAT_BUTTON_POS = (10, 150)  # Vị trí của nút chat
+    CHAT_BUTTON_IMAGE = pygame.image.load(os.path.join("assets", "Chat_Rect.png"))  # Load hình ảnh của nút chat
     chat_button = ChatButton(CHAT_BUTTON_IMAGE, CHAT_BUTTON_POS)
 
-    # Khoi tao thread de nhan tin nhan
+    # Khởi tạo thread để nhận tin nhắn
     receive_thread = threading.Thread(target=receive_messages, args=(client_socket, chat_log))
-    receive_thread.daemon = True  # Dat thread nhan tin nhan thanh daemon de no tu dong khi chuong trinh chinh ket thuc
+    receive_thread.daemon = True  # Đặt thread nhận tin nhắn thành daemon để nó tự đóng khi chương trình chính kết thúc
     receive_thread.start()
 
     def redraw_window():
@@ -533,7 +533,7 @@ def main():
     status_thread = threading.Thread(target=receive_game_status)
     status_thread.daemon = True
     status_thread.start()
-    
+
     while run:
         clock.tick(FPS)
         redraw_window()
@@ -541,18 +541,18 @@ def main():
         if lives <= 0 or player.health <= 0:
             lost = True
 
-        if player.score == 500:
+        if player.score == 50:
             win = True
 
         if (win or lost) and not status_sent:
             if win:
-                send_game_status('win')  # Gui thong tin chien thang toi server
+                send_game_status('win')  # Gửi thông tin chiến thắng tới server
             if lost:
-                send_game_status('lost')  # Gui thong tin thua cuoc toi server
+                send_game_status('lost')  # Gửi thông tin thua cuộc tới server
 
-            threading.Timer(2, delay_run_false).start()  # Tri hoan viec dat run thanh False
-            threading.Timer(2, reset).start()  # Tri hoan viec reset
-            status_sent = True  # Dat co de ngan chan viec gui nhieu lan
+            threading.Timer(2, delay_run_false).start()  # Trì hoãn việc đặt run thành False sau 5 giây
+            threading.Timer(2, reset).start()  # Trì hoãn việc reset sau 5 giây
+            status_sent = True  # Đặt cờ để ngăn chặn việc gửi nhiều lần
 
 
         if len(enemies) == 0:
@@ -589,7 +589,7 @@ def main():
             energy_icon.draw(WIN)
             if energy_icon.collision(player):
                 player.power_level += 1
-                # Kiem tra thoi gian ton tai cua power-up, neu het hieu luc thi huy no
+                # Kiểm tra thời gian tồn tại của power-up, nếu hết hiệu lực thì hủy nó
                 if time.time() - energy_icon.start_time >= POWER_UP_DURATION:
                     player.power_level = 1
                 energy_icons.remove(energy_icon)
@@ -606,10 +606,11 @@ def main():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 mouse_pos = pygame.mouse.get_pos()
                 if chat_button.is_clicked(mouse_pos):
-                    chat_box()  # Hien thi giao dien chat khi nut chat duoc nhan
+                    chat_box()  # Hiển thị giao diện chat khi nút chat được nhấn
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_m:
-                    chat_box()  # Hien thi giao dien chat khi nhan phim "M"
+                    chat_box()  # Hiển thị giao diện chat khi nhấn phím "M"
+
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_a] and player.x - player_vel > 0: # left
@@ -675,7 +676,7 @@ def connect_to_server():
         connected.set()
         print("Connected to server successfully.")
     except Exception as e:
-        print(f"Loi khi ket noi toi may chu: {e}")
+        print(f"Lỗi khi kết nối tới máy chủ: {e}")
         client_socket = None
 
 def ready_from_server():
@@ -686,24 +687,24 @@ def ready_from_server():
         try:
             if client_socket is not None:
                 if connected.is_set():
-                    # Nhan thong diep tu may chu
+                    # Nhận thông điệp từ máy chủ
                     message = client_socket.recv(1024).decode()
                     if message == "ready_to_start":
                         ready_to_start.set()
                 else:
-                    # Dung mot thoi gian ngan de cho socket co co hoi ket noi
+                    # Dừng một thời gian ngắn để cho socket có cơ hội kết nối
                     time.sleep(0.1)
         except ConnectionResetError as e:
-            # print(f"Ket noi da bi dong boi may chu: {e}")
+            # print(f"Kết nối đã bị đóng bởi máy chủ: {e}")
             break
         except Exception as e:
-            # print(f"Loi khi nhan thong diep tu may chu: {e}")
+            # print(f"Lỗi khi nhận thông điệp từ máy chủ: {e}")
             break
 
 def reset_game_state():
     global connected, ready_to_start
     connected.clear()
-    ready_to_start.clear()  # Dat lai trang thai "ready_to_start"
+    ready_to_start.clear()  # Đặt lại trạng thái "ready_to_start"
 
 def play():
     global connected, ready_to_start, client_thread
@@ -736,29 +737,10 @@ def play():
                 elif event.key == pygame.K_p:
                     if not connect:
                         connect_to_server()
-                        connected.wait(1)  # Wait until connected, with a timeout of 5 seconds
-                        if not connected.is_set():
-                            screen.fill((0, 0, 0))
-                            font = pygame.font.Font(None, 36)
-                            text = font.render("Failed to connect to the server.", True, (255, 255, 255))
-                            text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-                            screen.blit(text, text_rect)
-                            pygame.display.flip()
-
-                            # Wait for 2 seconds to show the message before returning
-                            wait_time = 2000  # 2000 milliseconds = 2 seconds
-                            start_wait = pygame.time.get_ticks()
-                            while pygame.time.get_ticks() - start_wait < wait_time:
-                                for event in pygame.event.get():
-                                    if event.type == pygame.QUIT:
-                                        pygame.quit()
-                                        sys.exit()
-                                    elif event.type == pygame.KEYDOWN:
-                                        if event.key == pygame.K_ESCAPE:
-                                            return
-                            return  # Return if unable to connect to the server
-                        client_thread = threading.Thread(target=ready_from_server)
-                        client_thread.start()
+                        connected.wait()  # Wait until connected
+                        if connected.is_set():
+                            client_thread = threading.Thread(target=ready_from_server)
+                            client_thread.start()
                     connect = True
 
         if not connect:
@@ -790,7 +772,7 @@ def play():
     reset_game_state()
 
 
-# Khoi tao luong cho client
+# Khởi tạo luồng cho client
 client_thread = threading.Thread(target=ready_from_server)
 client_thread.start()
 

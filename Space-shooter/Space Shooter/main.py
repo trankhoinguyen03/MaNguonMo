@@ -6,7 +6,6 @@ from pygame import mixer
 import sys
 import socket
 import threading
-import json
 from threading import Lock
 from button import Button
 from objects import Background
@@ -519,7 +518,7 @@ def main():
         if lives <= 0 or player.health <= 0:
             lost = True
 
-        if player.score == 20:
+        if player.score == 50:
             win = True
 
         if (win or lost) and not status_sent:
